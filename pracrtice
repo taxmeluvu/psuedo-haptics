@@ -1,0 +1,46 @@
+Screen('Preference', 'SkipSyncTests', 1);
+clear all;
+sxcm=51.0;
+sycm=28.7;
+[wnum,wrect]=Screen('OpenWindow',0,[127 127 127]);
+
+txt='指を丸の上に置くと丸が動きます';	% 実験開始時の説明
+txt=double(txt);	% 日本語の文字化け回避に必要
+Screen('TextFont',wnum,'Yu Gothic');    % 日本語表示用に日本語フォント指定
+Screen('TextSize',wnum,27);
+DrawFormattedText(wnum,txt,'center','center');
+
+[cx,cy]=RectCenter(wrect);
+xres=wrect(3)/sxcm;
+yres=wrect(4)/sycm;
+
+
+n=1;
+Screen('FillOval',wnum,[255 255 255],[cx-n*xres,cy/2-n*yres,cx+n*xres,cy/2+n*yres]);
+Screen('Flip',wnum,0);
+SetMouse(0, 0)
+
+[x,y]=GetMouse;
+resp=0;
+while resp==0
+    [x,y]=GetMouse;
+    if cx-n*xres<x && cy/2-n*yres<y && x<cx+n*xres && y<cy/2+n*yres
+        Beeper(500,0.3,0.1);
+        WaitSecs(0.5);
+        Beeper(500,0.3,0.1);
+        WaitSecs(0.5);
+        Beeper(500,0.3,0.1);
+        WaitSecs(0.5);
+        Beeper(2000,0.3,0.5);
+        for i=1:10
+            for y=270:50:540
+                
+                Screen('FillOval',wnum,[255 255 255],[cx-n*xres,y-n*yres,cx+n*xres,y+n*yres]);
+                Screen('Flip',wnum,0);
+            end
+            WaitSecs(0.5)
+        end
+        resp=1;
+    end
+end
+Screen('CloseAll');
