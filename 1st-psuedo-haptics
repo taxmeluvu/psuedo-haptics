@@ -1,0 +1,257 @@
+Screen('Preference', 'SkipSyncTests', 1);
+clear all;
+InitializePsychSound;    % 初期化
+[y, freq] = psychwavread('ナイフを投げる.wav');
+wavedata = y';
+% wavedata = [wavedata ; wavedata];
+pahandle(1) = PsychPortAudio('Open');
+PsychPortAudio('FillBuffer', pahandle(1), wavedata);
+
+[y, freq] = psychwavread('カーソル移動7.wav');
+wavedata = y';
+% wavedata = [wavedata ; wavedata];
+pahandle(2) = PsychPortAudio('Open');
+PsychPortAudio('FillBuffer', pahandle(2), wavedata);
+
+[y, freq] = psychwavread('button04a.wav');
+wavedata = y';
+% wavedata = [wavedata ; wavedata];
+pahandle(3) = PsychPortAudio('Open');
+PsychPortAudio('FillBuffer', pahandle(3), wavedata);
+
+[y, freq] = psychwavread('geton.wav');
+wavedata = y';
+% wavedata = [wavedata ; wavedata];
+pahandle(4) = PsychPortAudio('Open');
+PsychPortAudio('FillBuffer', pahandle(4), wavedata);
+
+[y, freq] = psychwavread('車のブレーキ.wav');
+wavedata = y';
+% wavedata = [wavedata ; wavedata];
+pahandle(5) = PsychPortAudio('Open');
+PsychPortAudio('FillBuffer', pahandle(5), wavedata);
+
+% for i=1:5
+%     disp(pahandle(i))
+%     PsychPortAudio('Start', pahandle(i));
+%     WaitSecs(0.3);
+% end
+
+prompt = {'name'};
+dlgtitle = 'personal information';
+dims = [1 35];
+definput = {'ローマ字でフルネームを入力'};
+opts.Interpreter = 'tex';
+answer = inputdlg(prompt,dlgtitle,dims,definput,opts);
+
+% [wnum,wrect]=Screen('OpenWindow',0,[127 127 127],[100 100 100+1920 100+1080]);
+[wnum,wrect]=Screen('OpenWindow',0,[127 127 127]);
+[cx,cy]=RectCenter(wrect);	% 画面の中央の座標を変数に設定(cx,cy)
+% sxcm=60.0;	% パソコン画面の実測サイズ（横）cm
+% sycm=34.4;	% パソコン画面の実測サイズ（縦）cm
+sxcm=51.0;
+sycm=28.7;
+xres=wrect(3)/sxcm; % 横1cm当りの画素密度（視距離57cmの場合、視角１度当りの画素密度に等しくなる）※wrectは[0 0  1920 1020]のように画面の左上と右下のXY座標を表している
+yres=wrect(4)/sycm;	% 縦1cm当りの画素密度
+% imgfile=imread(['suga.jpg']);
+% imgtex=Screen('MakeTexture',wnum,imgfile);
+spriteSize = 1000;
+screenNumber = max(Screen('Screens'));
+backgroundColor = BlackIndex(screenNumber);
+foregroundColor = WhiteIndex(screenNumber);
+foregroundMinusBackground = abs(foregroundColor - backgroundColor);
+% spriteFrame = Screen('MakeTexture', wnum ,backgroundColor + foregroundMinusBackground * rand(spriteSize));
+% mat=zeros(wrect(3)/4,wrect(4));
+
+
+
+for x=1:wrect(3)/4
+    for y=1:wrect(4)
+        mat(y,x)=255*rand;
+    end
+end
+spriteFrame = Screen('MakeTexture', wnum ,mat);
+% numberOfSpriteFrames = 25;
+
+trial=1;	% 実験条件の組み合わせ番号
+
+for cd=[0.2 0.5 0.8 1 1.2 1.5 2 3]
+    for repeat=1:10	% 各組み合わせの繰り返し回数（同一条件を計10回実行する）
+        for soundtype=0:5
+            data(trial).cd=cd;% 実験条件を「構造体変数」に指定
+            data(trial).order=mod(repeat,2)+1;
+            data(trial).soundtype=soundtype;
+            trial=trial+1;	% 組み合わせ番号を１進める
+        end
+    end
+end
+data=Shuffle(data);	% 組み合わせの順序をシャッフルしてランダムにする
+
+for trial=1:length(data)
+    cdlist=[1 1];
+    cdlist(data(trial).order)=data(trial).cd;
+    data(trial).cd1=cdlist(1);
+    data(trial).cd2=cdlist(2);
+    junban=1;
+   
+    for cd=cdlist
+        buttons = 0;
+        played=0;
+        [mX,mY, buttons] = GetMouse;
+        respkey=KbName('space');
+        
+        resp=0;
+        mmY=0;
+        previousY=mY;
+        Screen('DrawTexture',wnum,spriteFrame,[],[0 mmY-wrect(4)*2 wrect(3) mmY+wrect(4)*2]);
+        Screen('Flip',wnum,0);
+        while  resp==0% キー応答の状態を初期化（0＝応答なし、1＝応答あり）
+            [keyIsDown, keytime, keycode] = KbCheck;% キーボードの状態を変数に設定（押されているか、押された時刻、押されたキーコード）
+            [mX,mY, buttons] = GetMouse;
+            
+            
+            while isequal(buttons,[1 0 0])
+                previousY = mY;
+                [mX,mY, buttons] = GetMouse;
+                
+                if mX<100 && mY>1080-200 && junban==1
+                    txt= '先ほどの応答を訂正しました。';	% 実験開始時の説明
+                    txt=double(txt);	% 日本語の文字化け回避に必要
+                    Screen('TextFont',wnum,'Yu Gothic');    % 日本語表示用に日本語フォント指定
+                    Screen('TextSize',wnum,27);
+                    DrawFormattedText(wnum,txt,'center','center',[255 0 0]);
+                    Screen('Flip',wnum,0);
+                    data(trial-1).Choice=2/Choice;
+                    WaitSecs(1)
+                end
+                
+        
+                if  previousY ~= mY
+                    mmY = mmY+cd*(mY-previousY);
+                    Screen('DrawTexture',wnum,spriteFrame,[],[0 mmY-wrect(4)*2 wrect(3) mmY+wrect(4)*2]);
+                    Screen('Flip',wnum,0);
+                    
+                    if data(trial).order==junban
+                        if data(trial).soundtype>0 && played==0
+                            s = PsychPortAudio('GetStatus', pahandle(data(trial).soundtype));
+                            
+                            if s.Active==0
+                                PsychPortAudio('Start', pahandle(data(trial).soundtype), 1);
+                                played=1;   % sound is already played (to avoid duplicated playing)
+                            end
+                        end
+                    end
+                    
+                    if mmY>=1/4*wrect(4)*cd
+                        resp=1;
+                        Screen('FillRect',wnum,[127 127 127],[0 mmY-wrect(4)*2 wrect(3) mmY+wrect(4)*2]);
+                        Screen('Flip',wnum,0);
+                        WaitSecs(0.5);
+                        break% プログラムを一時停止（１秒間）
+                    end
+                    
+                end
+            end
+        end
+        
+        junban=junban+1;
+    end
+    
+    WaitSecs(0.5);
+    txt=[num2str(trial) '/' num2str(length(data)) '\n\n抵抗感が大きかった方を\n選択してください'];	% 実験開始時の説明
+    txt=double(txt);	% 日本語の文字化け回避に必要
+    Screen('TextFont',wnum,'Yu Gothic');    % 日本語表示用に日本語フォント指定
+    Screen('TextSize',wnum,27);
+    DrawFormattedText(wnum,txt,'center','center',[0 0 0]);
+    
+    for n=1:2
+        Screen('Fillrect',wnum,[255 255 255],[cx+(-1)^(n)*10*xres-4*xres cy-4*yres cx+(-1)^(n)*10*xres+4*xres cy+4*yres]); %長方形書きまくるぞ
+        
+        DrawFormattedText(wnum,num2str(n),cx+(-1)^(n)*10*xres,cy);   %長方形の真ん中に来るように数字打つぞ
+    end
+    Screen('Flip',wnum,0);
+    
+    Choice=0;
+    SetMouse(0, 0)
+    while(Choice==0)
+        [xp,yp,buttons]=GetMouse(wnum);
+        %        if max(buttons)==1
+        %            Beeper(2000,0.3,0.1);
+        %        end
+        
+        for n=1:2
+            if cx+(-1)^(n)*10*xres-4*xres<xp && cy-4*yres<yp && cx+(-1)^(n)*10*xres+4*xres>xp && cy+4*yres>yp  %もし評価マス内でクリックしたら
+                Choice=n;
+                data(trial).Choice=Choice;
+%                 Beeper(2000,0.3,0.1);	% ビープ音（2000Hz, 音量30%, 0.1s）
+                %                 break;
+            elseif xp>1920-100 && yp<100
+                Beeper(2000,0.3,0.1);
+                Choice=999;
+                %                 break;
+            end
+        end
+        
+    end
+    if Choice==999
+        break;
+    end
+   
+    
+    
+    if mod(trial,50)==0 
+        txt='少し休憩しましょう！画面をタッチすると再開します。';	% 途中休憩用のメッセージ
+        txt=double(txt);
+        DrawFormattedText(wnum,txt,'center','center');
+        ftime=Screen('Flip',wnum,0,0);
+        WaitSecs(2)
+        SetMouse(0, 0)
+        while 1
+            [xp,yp,buttons]=GetMouse(wnum);
+            if xp+yp>0
+                break
+            end
+        end
+    end
+end
+
+% load ttt.mat
+
+fname=[answer{1}  '解析.csv'];
+fid=fopen(fname,'w');
+for soundtype =0:5
+    fprintf(fid,'sound,cd,cnt,record\n');
+    for  cd=[0.2 0.5 0.8 1 1.2 1.5 2 3]
+         cnt=0;
+        for record=1:length(data)
+            if data(record).cd==cd && data(record).soundtype==soundtype
+                if data(record).order==data(record).Choice 
+                    cnt=cnt+1;
+                end
+            end
+        end
+        fprintf(fid,'%d,%f,%d,%d\n',soundtype,cd,cnt,repeat);
+    end
+end
+
+fclose(fid);
+WaitSecs(0.5);
+
+% if Choice~=999
+    fname=[answer{1} '生データ.csv'];
+    fid=fopen(fname,'w');
+    fprintf(fid,'trial,cd1,cd2,sound,Choice\n');
+    for record=1:length(data)
+        fprintf(fid,'%d,%f,%f,%d,%d\n',record,data(record).cd1,data(record).cd2,data(record).soundtype,data(record).Choice);
+    end
+    fclose(fid);
+    WaitSecs(0.5);
+% end
+% PsychPortAudio('Stop', pahandle);
+PsychPortAudio('Close');
+
+Screen('CloseAll');
+ShowCursor;
+ListenChar(0);
+
+
